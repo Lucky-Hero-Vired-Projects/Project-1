@@ -13,15 +13,15 @@ provider "aws" {
 #  profile = "lucky1225"
 }
 
-terraform {
-  backend "s3" {
-    bucket         = "backup-config-terraform-tfstate-lucky1225"       
-    key            = "terraform/state.tfstate"  
-    region         = "us-west-2"                
-    encrypt        = true                                
-    profile        = "lucky1225"                  
-  }
-}
+# terraform {
+#   backend "s3" {
+#     bucket         = "backup-config-terraform-tfstate-lucky1225"       
+#     key            = "terraform/state.tfstate"  
+#     region         = "us-west-2"                
+#     encrypt        = true                                
+#     profile        = "lucky1225"                  
+#   }
+# }
 
 module "vpc" {
     source = "./modules/vpc"
