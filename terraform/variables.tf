@@ -57,7 +57,6 @@ variable "desired_size" {
 variable "ami_type" {
     description = "ami type"
     type = string
-    default = "AL2023_x86_64_STANDARD"
 }
 
 variable "role_name" {
