@@ -1,13 +1,14 @@
 resource "aws_vpc" "this" {
-  cidr_block = var.vpc_cidr_block
-  enable_dns_support = true
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_support   = true
   enable_dns_hostnames = true
+
   tags = {
     Name = "capstone-eks-vpc"
   }
 }
 
-// internet gateway
+// Internet Gateway
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
@@ -15,97 +16,95 @@ resource "aws_internet_gateway" "this" {
     Name = "capstone-igw"
   }
 }
-// elastic Ip
+
+// Elastic IP for NAT Gateway
 resource "aws_eip" "nat_ip" {
-  count = length(aws_subnet.public)
-  domain   = "vpc"
+  domain = "vpc"
 }
 
-// public subnet
+// Public Subnets
 resource "aws_subnet" "public" {
-  count                  = length(var.public_subnet_cidrs)
-  vpc_id                 = aws_vpc.this.id
-  cidr_block             = element(var.public_subnet_cidrs, count.index)
-  availability_zone      = element(data.aws_availability_zones.available.names, count.index)
+  count                   = length(var.public_subnet_cidrs)
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = element(var.public_subnet_cidrs, count.index)
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
   map_public_ip_on_launch = true
+
   tags = {
-    Name = "public-subnet-${count.index}"
+    Name                    = "public-subnet-${count.index}"
     "kubernetes.io/role/elb" = "1"
   }
 }
 
-// private subnet
+// Private Subnets
 resource "aws_subnet" "private" {
-  count                  = length(var.private_subnet_cidrs)
-  vpc_id                 = aws_vpc.this.id
-  cidr_block             = element(var.private_subnet_cidrs, count.index)
-  availability_zone      = element(data.aws_availability_zones.available.names, count.index)
+  count                   = length(var.private_subnet_cidrs)
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = element(var.private_subnet_cidrs, count.index)
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
   map_public_ip_on_launch = false
+
   tags = {
-    Name = "private-subnet-${count.index}"
+    Name                           = "private-subnet-${count.index}"
     "kubernetes.io/role/internal-elb" = "1"
   }
 }
 
-// 2. nat gateway
+// NAT Gateway (Single NAT Gateway)
 resource "aws_nat_gateway" "this" {
-  count = length(aws_subnet.public)
-  allocation_id = aws_eip.nat_ip[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  allocation_id = aws_eip.nat_ip.id
+  subnet_id     = aws_subnet.public[0].id # Attach to the first public subnet
 
   tags = {
-    Name = "capstone-gw-NAT  ${count.index}"
+    Name = "capstone-gw-NAT"
   }
 
-  # To ensure proper ordering, it is recommended to add an explicit dependency
-  # on the Internet Gateway for the VPC.
   depends_on = [aws_internet_gateway.this]
 }
 
-
-// route table for public subnet
-resource "aws_route_table" "public" {
+// Public Route Table
+resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.this.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.this.id
+  }
 
   tags = {
     Name = "capstone-public-route-table"
   }
 }
-// route (public)
-resource "aws_route" "public_route" {
-  route_table_id            = aws_route_table.public.id
-  destination_cidr_block    = "0.0.0.0/0"
-  gateway_id = aws_internet_gateway.this.id
-}
-// route table association to public
+
+// Public Route Table Associations
 resource "aws_route_table_association" "public_association" {
   count        = length(aws_subnet.public)
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+  subnet_id    = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public_rt.id
 }
-// route table for private subnet
-resource "aws_route_table" "private" {
+
+// Private Route Table
+resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.this.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.this.id
+  }
 
   tags = {
     Name = "capstone-private-route-table"
   }
 }
-// route for route table
-resource "aws_route" "private_route" {
-  count = length(aws_subnet.private)
-  route_table_id            = aws_route_table.private.id
-  destination_cidr_block    = "0.0.0.0/0"
-  nat_gateway_id = aws_nat_gateway.this[count.index].id
-}
-// route table association to private
+
+// Private Route Table Associations
 resource "aws_route_table_association" "private_association" {
-  count = length(aws_subnet.private)
+  count          = length(aws_subnet.private)
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private_rt.id
 }
 
-
+// Availability Zones Data
 data "aws_availability_zones" "available" {
   state = "available"
 }

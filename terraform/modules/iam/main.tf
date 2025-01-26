@@ -1,7 +1,7 @@
 
 // Iam role 
 resource "aws_iam_role" "capstone_eks_role" {
-  name = "Lucky_capstone_eks_role"
+  name = "lucky-eks-cluster-role"
 
   # Terraform's "jsonencode" function converts a
   # Terraform expression result to valid JSON syntax.
