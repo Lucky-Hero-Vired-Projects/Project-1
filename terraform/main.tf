@@ -10,7 +10,7 @@ terraform {
 # Configure the AWS Provider
 provider "aws" {
   region = var.aws_region
-  profile = "lucky1225"
+#  profile = "lucky1225"
 }
 
 terraform {
