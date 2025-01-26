@@ -1,11 +1,15 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Choose Terraform action: apply to create resources or destroy to delete them')
+    }
+
     environment {
         TERRAFORM_DIR = 'terraform'
-        AWS_ACCESS_KEY_ID = lucky-credentials('aws-access-key-id') 
-        AWS_SECRET_ACCESS_KEY = lucky-credentials('aws-secret-access-key') 
-        AWS_DEFAULT_REGION = 'us-west-2
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id') 
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') 
+        AWS_DEFAULT_REGION = 'us-west-2'
     }
 
     stages {
@@ -25,22 +29,24 @@ pipeline {
             }
         }
 
-        stage('Terraform Plan') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh '''
-                        terraform plan -out=tfplan
-                    '''
-                }
+        stage('Terraform Action') {
+            when {
+                expression { params.ACTION == 'apply' || params.ACTION == 'destroy' }
             }
-        }
-
-        stage('Terraform Apply') {
             steps {
                 dir("${TERRAFORM_DIR}") {
-                    sh '''
-                        terraform apply -auto-approve tfplan
-                    '''
+                    script {
+                        if (params.ACTION == 'apply') {
+                            sh '''
+                                terraform plan -out=tfplan
+                                terraform apply -auto-approve tfplan
+                            '''
+                        } else if (params.ACTION == 'destroy') {
+                            sh '''
+                                terraform destroy -auto-approve
+                            '''
+                        }
+                    }
                 }
             }
         }
@@ -48,10 +54,10 @@ pipeline {
 
     post {
         success {
-            echo 'Infrastructure setup completed successfully.'
+            echo 'Terraform action completed successfully.'
         }
         failure {
-            echo 'Infrastructure setup failed. Please check logs.'
+            echo 'Terraform action failed. Please check logs.'
         }
     }
 }
