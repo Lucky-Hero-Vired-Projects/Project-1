@@ -1,0 +1,54 @@
+name: DOcker Images
+
+on:
+  push:
+    branches:
+      - main  
+
+env:
+  AWS_REGION: ${{ env.AWS_DEFAULT_REGION }}
+  ECR_REPO_PREFIX: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"  
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Step 3: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 4: Build and push Docker images for each service
+      - name: Build and push Docker images
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          # Define services and their paths
+          services=("authService" "companyService" "userService")
+          BUILD_ID="${{ github.run_number }}"  
+
+          for service in "${services[@]}"; do
+            # Define paths and image name
+            service_path="./backend/$service"
+            image_name="${{ env.ECR_REPO_PREFIX }}/${service}:${BUILD_ID}"
+
+            echo "Building and pushing $service image with tag: $BUILD_ID..."
+
+            # Build the Docker image
+            docker build -t "$image_name" "$service_path"
+
+            # Push the image to ECR
+            docker push "$image_name"
+
+            echo "Successfully pushed $service image to $image_name"
+          done
