@@ -6,7 +6,7 @@ on:
       - main  
 
 env:
-  AWS_REGION: ${{ env.AWS_DEFAULT_REGION }}
+  AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
   ECR_REPO_PREFIX: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"  
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
           for service in "${services[@]}"; do
             # Define paths and image name
             service_path="./backend/$service"
-            image_name="${{ env.ECR_REPO_PREFIX }}/${service}:${BUILD_ID}"
+            image_name="${{ env.ECR_REPO_PREFIX }}/lucky-repos/${service}:${BUILD_ID}"
 
             echo "Building and pushing $service image with tag: $BUILD_ID..."
 
