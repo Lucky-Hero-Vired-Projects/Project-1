@@ -1,4 +1,4 @@
-name: Create EKS Cluster
+name: Create or Destroy EKS Cluster
 
 on:
   workflow_dispatch:
@@ -18,33 +18,41 @@ jobs:
 
     env:
       TERRAFORM_DIR: terraform
-      AWS_DEFAULT_REGION: us-west-2
+      AWS_REGION: us-west-2
+      TF_BUCKET: backup-config-terraform-tfstate-lucky
+      TF_KEY: terraform/state.tfstate
 
     steps:
-      # Checkout the code repository
+      # Step 1: Checkout the code repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up AWS credentials
+      # Step 2: Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      # Set up Terraform
+      # Step 3: Set up Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.6.0
 
-      # Initialize Terraform
+      # Step 4: Initialize Terraform with S3 Backend
       - name: Initialize Terraform
         working-directory: ${{ env.TERRAFORM_DIR }}
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_BUCKET }}" \
+            -backend-config="key=${{ env.TF_KEY }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
-      # Plan or destroy based on input
+      # Step 5: Apply or Destroy based on input
       - name: Execute Terraform Action
         working-directory: ${{ env.TERRAFORM_DIR }}
         run: |
@@ -52,18 +60,19 @@ jobs:
             terraform plan -out=tfplan
             terraform apply -auto-approve tfplan
           elif [ "${{ github.event.inputs.ACTION }}" == "destroy" ]; then
+            terraform state pull > state.tfstate
             terraform destroy -auto-approve
           else
             echo "Invalid ACTION input: ${{ github.event.inputs.ACTION }}"
             exit 1
           fi
 
-      # Post success message
+      # Step 6: Post success message
       - name: Success Message
         if: success()
         run: echo "Terraform action ${{ github.event.inputs.ACTION }} completed successfully."
 
-      # Post failure message
+      # Step 7: Post failure message
       - name: Failure Message
         if: failure()
         run: echo "Terraform action ${{ github.event.inputs.ACTION }} failed. Please check logs."
