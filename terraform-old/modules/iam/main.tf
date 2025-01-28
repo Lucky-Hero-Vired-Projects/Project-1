@@ -25,10 +25,17 @@ resource "aws_iam_role" "capstone_eks_role" {
 }
 
 // attaching policy to the role
-resource "aws_iam_role_policy_attachment" "eks-role-policy_attachment" {
+resource "aws_iam_role_policy_attachment" "eks_role_policy_attachments" {
+  for_each = toset([
+    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  ])
   role       = aws_iam_role.capstone_eks_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  policy_arn = each.value
 }
+
 
 
 

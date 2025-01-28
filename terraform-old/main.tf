@@ -10,18 +10,18 @@ terraform {
 # Configure the AWS Provider
 provider "aws" {
   region = var.aws_region
-#  profile = "lucky1225"
+  profile = "herovired"
 }
 
-# terraform {
-#   backend "s3" {
-#     bucket         = "backup-config-terraform-tfstate-lucky1225"       
-#     key            = "terraform/state.tfstate"  
-#     region         = "us-west-2"                
-#     encrypt        = true                                
-#     profile        = "lucky1225"                  
-#   }
-# }
+terraform {
+  backend "s3" {
+    bucket         = "backup-config-terraform-tfstate-lucky"       
+    key            = "terraform/state.tfstate"  
+    region         = "us-west-2"                
+    encrypt        = true                                
+    profile        = "herovired"                  
+  }
+}
 
 module "vpc" {
     source = "./modules/vpc"
