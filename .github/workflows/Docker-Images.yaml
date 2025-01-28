@@ -50,7 +50,7 @@ jobs:
 
             # Define paths and image name
             service_path="./backend/$service"
-            image_name="${{ env.ECR_REPO_PREFIX }}/${lowercase_service}:${BUILD_ID}"
+            image_name="${{ env.ECR_REPO_PREFIX }}/lucky_${lowercase_service}:${BUILD_ID}"
 
             echo "Building and pushing $service image with tag: $BUILD_ID..."
 
