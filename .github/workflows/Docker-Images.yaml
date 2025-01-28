@@ -1,9 +1,15 @@
 name: Build and Push to ECR
 
 on:
-  push:
-    branches:
-      - main  
+  workflow_dispatch:
+    inputs:
+      ACTION:
+        description: "Choose option build"
+        required: true
+        default: "build"
+        type: choice
+        options:
+          - build
 
 env:
   ECR_REPO_PREFIX: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com" 
